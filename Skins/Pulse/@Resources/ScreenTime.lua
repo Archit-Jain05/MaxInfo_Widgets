@@ -5,7 +5,7 @@
 local TOP = 3                                               -- legend entries in ScreenTime.ini
 local CHART_X, CHART_W, BASE, CHART_H = 120, 118, 58, 30    -- logical px, as in ScreenTime.ini
 local STACK_X, STACK_W = 14, 224
-local SHADES = { '122,184,255,255', '122,184,255,150', '122,184,255,85' }   -- top apps; rest is the track
+local SHADES = { '10,132,255,255', '100,210,255,255', '191,90,242,255' }   -- top apps (blue, cyan, purple); rest is the track
 
 local sent = {}
 local function set(name, value)
@@ -45,7 +45,7 @@ function Update()
     local hgt = math.max(v / peak * CHART_H, 1.5)
     bars[h] = string.format('Rectangle %.1f,%.1f,%.1f,%.1f,%.1f | Fill Color %s | StrokeWidth 0',
       (CHART_X + (h - 1) * pitch) * S, (BASE - hgt) * S, (pitch - 1.5) * S, hgt * S, 1 * S,
-      v > 0 and '122,184,255' or '255,255,255,18')
+      v > 0 and '10,132,255' or '255,255,255,18')
   end
   shapes('Bars', bars)
 

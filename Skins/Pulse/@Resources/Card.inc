@@ -28,10 +28,11 @@ MaxValue=100
 Measure=Calc
 Formula=Clamp(Shown, 0.5, 99.9) * PI / 50
 
-; Usage colour: blue 122,184,255 -> amber 245,165,36 over 60-85%, amber -> red 240,82,82 over 85-100%.
+; Usage colour: blue 10,132,255 below 60%, yellow 255,204,0 from 60%, yellow -> red 255,69,58 over 85-100%.
+; (A blue -> yellow blend passes through a washed-out beige, so that step is a hard switch.)
 [Warm]
 Measure=Calc
-Formula=Clamp((Shown - 60) / 25, 0, 1)
+Formula=(Shown >= 60) ? 1 : 0
 
 [Hot]
 Measure=Calc
@@ -39,15 +40,15 @@ Formula=Clamp((Shown - 85) / 15, 0, 1)
 
 [ToneR]
 Measure=Calc
-Formula=Round(122 + 123 * Warm - 5 * Hot)
+Formula=Round(10 + 245 * Warm)
 
 [ToneG]
 Measure=Calc
-Formula=Round(184 - 19 * Warm - 83 * Hot)
+Formula=Round(132 + 72 * Warm - 135 * Hot)
 
 [ToneB]
 Measure=Calc
-Formula=Round(255 - 219 * Warm + 46 * Hot)
+Formula=Round(255 - 255 * Warm + 58 * Hot)
 
 ; Apple-style corner outline for the card background (sets #CardPath# once).
 [Squircle]

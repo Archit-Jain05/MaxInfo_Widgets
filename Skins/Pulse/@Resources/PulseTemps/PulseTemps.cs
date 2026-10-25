@@ -353,7 +353,7 @@ class PulseTemps
     // The cursor touching the left screen edge opens Widgets, the right edge the notification
     // centre, straight away and with Windows' own panel animations. Not while a mouse button is
     // held (dragging a scrollbar or resizing a window at the edge), once per touch until the
-    // cursor moves REARM px away, and off while a full-screen app (game, video) is in front.
+    // cursor moves REARM px away, and only while the desktop is in front (see DesktopInFront).
     const int REARM = 40;
 
     [DllImport("user32.dll")] static extern bool GetCursorPos(out POINT point);
@@ -380,7 +380,7 @@ class PulseTemps
                 }
                 int at = p.X <= 0 ? -1 : p.X >= width - 1 ? 1 : 0;
                 bool button = (GetAsyncKeyState(0x01) & 0x8000) != 0 || (GetAsyncKeyState(0x02) & 0x8000) != 0;
-                if (at == 0 || button || FullScreenInFront()) continue;
+                if (at == 0 || button || !DesktopInFront()) continue;
                 if (at < 0) OpenWidgets(); else WinShortcut((byte)'N');
                 fired = true;
             }
@@ -420,6 +420,54 @@ class PulseTemps
         keybd_event(key, 0, 0, IntPtr.Zero);
         keybd_event(key, 0, UP, IntPtr.Zero);
         keybd_event(WIN, 0, UP, IntPtr.Zero);
+    }
+
+    // The desktop is what you're looking at: the wallpaper/icons have focus (Progman, or WorkerW
+    // after Win+D) or one of the widgets does (clicking a card focuses its Rainmeter window). The
+    // taskbar takes focus after "minimise all" / show desktop, and a window minimised while focused
+    // can keep focus, so those count as the desktop unless an app window is maximised or
+    // full-screen. Any other app in focus: no bumps.
+    [DllImport("user32.dll")] static extern bool IsIconic(IntPtr hwnd);
+    [DllImport("user32.dll")] static extern bool IsZoomed(IntPtr hwnd);
+    [DllImport("dwmapi.dll")] static extern int DwmGetWindowAttribute(IntPtr hwnd, int attr, out int value, int size);
+
+    static bool DesktopInFront()
+    {
+        IntPtr h = GetForegroundWindow();
+        if (h == IntPtr.Zero) return false;
+        string c = ClassOf(h);
+        if (c == "Progman" || c == "WorkerW" || c == "RainmeterMeterWindow") return true;
+        // the taskbar, or a window minimised while focused (it keeps focus when nothing else is open)
+        return (c == "Shell_TrayWnd" || IsIconic(h)) && !BigAppWindowShown();
+    }
+
+    static string ClassOf(IntPtr h)
+    {
+        var cls = new StringBuilder(64);
+        GetClassName(h, cls, cls.Capacity);
+        return cls.ToString();
+    }
+
+    // A visible app window that's maximised or covers the screen. Skips minimised windows, cloaked
+    // ones (hidden Store app frames, windows on other virtual desktops) and the shell's own windows.
+    static bool BigAppWindowShown()
+    {
+        int sw = GetSystemMetrics(0), sh = GetSystemMetrics(1);
+        bool found = false;
+        EnumWindows((hwnd, _) =>
+        {
+            if (!IsWindowVisible(hwnd) || IsIconic(hwnd)) return true;
+            int cloaked;
+            if (DwmGetWindowAttribute(hwnd, 14, out cloaked, 4) == 0 && cloaked != 0) return true;   // DWMWA_CLOAKED
+            string c = ClassOf(hwnd);
+            if (c == "Progman" || c == "WorkerW" || c == "Shell_TrayWnd" || c == "Shell_SecondaryTrayWnd"
+                || c == "RainmeterMeterWindow") return true;
+            RECT r;
+            GetWindowRect(hwnd, out r);
+            if (IsZoomed(hwnd) || (r.Left <= 0 && r.Top <= 0 && r.Right >= sw && r.Bottom >= sh)) { found = true; return false; }
+            return true;
+        }, IntPtr.Zero);
+        return found;
     }
 
     // A window covering the whole screen, taskbar included (maximized windows stop at the taskbar).

@@ -6,7 +6,7 @@ local ROWS = 8                                         -- app rows in ScreenTime
 local HOUR_X, HOUR_W, HOUR_BASE, HOUR_H = 20, 164, 178, 56   -- logical px, as in the .ini
 local WEEK_X, WEEK_W, WEEK_BASE, WEEK_H = 20, 164, 300, 66
 local SHARE_W = 160
-local ACCENT, FAINT = '122,184,255', '255,255,255,18'
+local ACCENT, TODAY, FAINT = '10,132,255', '100,210,255', '255,255,255,18'   -- today's bar in cyan
 
 local sent = {}
 local function set(name, value)
@@ -76,7 +76,7 @@ function Update()
   local wpitch, wlist = WEEK_W / 7, {}
   for i = 1, 7 do
     local d = week[i] or { day = '', secs = 0 }
-    local color = d.secs == 0 and FAINT or (i == 7 and ACCENT or (ACCENT .. ',120'))
+    local color = d.secs == 0 and FAINT or (i == 7 and TODAY or ACCENT)
     wlist[i] = bar(WEEK_X + (i - 1) * wpitch + 3, WEEK_BASE, wpitch - 6, d.secs / wpeak * WEEK_H, color, S)
     local y, m, dd = d.day:match('(%d+)%-(%d+)%-(%d+)')
     set('Day' .. i, y and os.date('%a', os.time { year = y, month = m, day = dd, hour = 12 }):sub(1, 1) or '')

@@ -10,7 +10,7 @@ UpdateDivider=#Tick#
 RegExpSubstitute=1
 Substitute="^0$":"","^(\d+)$":"\1°"
 IfCondition=TempValue >= 90
-IfTrueAction=[!SetOption Temp FontColor "245,165,36"]
+IfTrueAction=[!SetOption Temp FontColor "255,204,0"]
 IfFalseAction=[!SetOption Temp FontColor "#Muted#"]
 
 [Temp]

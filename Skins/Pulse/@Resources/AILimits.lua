@@ -14,11 +14,12 @@ local function set(name, value)
   if sent[name] ~= value then sent[name] = value; SKIN:Bang('!SetVariable', name, value) end
 end
 
--- blue 122,184,255 -> amber 245,165,36 over 60-85%, amber -> red 240,82,82 over 85-100% (as the stat cards)
+-- blue 10,132,255 below 60%, then yellow 255,204,0, turning red 255,69,58 over 85-100%.
+-- (A blue -> yellow blend would pass through a washed-out beige, so that step is a hard switch.)
 local function tone(p)
-  local warm = math.min(math.max((p - 60) / 25, 0), 1)
+  if p < 60 then return '10,132,255' end
   local hot = math.min(math.max((p - 85) / 15, 0), 1)
-  return string.format('%d,%d,%d', 122 + 123 * warm - 5 * hot, 184 - 19 * warm - 83 * hot, 255 - 219 * warm + 46 * hot)
+  return string.format('%d,%d,%d', 255, 204 - 135 * hot, 58 * hot)
 end
 
 local function countdown(secs)

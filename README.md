@@ -62,7 +62,7 @@ The layout is made for **1920×1080 at 125% scaling** with the taskbar at the to
 | Codex limits | Reads the newest `~/.codex/sessions` log |
 | Card corners | Clips each card's window to its rounded shape, so the blur doesn't show past the corners |
 | Desktop icons | Moves any desktop icon that lands under a widget to the nearest free spot (skipped with auto-arrange) |
-| Edge bumps | Cursor on the left screen edge opens Widgets; the right edge opens the notification centre |
+| Edge bumps | Cursor on the left screen edge opens Widgets; the right edge opens the notification centre. Only while you're on the desktop, never over an app |
 
 **Install:** from an **admin** PowerShell:
 
