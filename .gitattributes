@@ -4,3 +4,4 @@
 *.png binary
 # the package manifest is plain UTF-8
 RMSKIN.ini text -working-tree-encoding
+*.jpg binary

@@ -4,6 +4,8 @@ A set of black-glass desktop widgets for [Rainmeter](https://www.rainmeter.net/)
 square cards on a shared grid, Apple-style continuous corners, frosted blur, SF Pro type and smooth
 animations. Everything idles at near-zero CPU.
 
+![Pulse on the desktop](docs/screenshots/overview.jpg)
+
 ## Widgets
 
 | Widget | Size | What it shows | Interactions |
@@ -22,6 +24,20 @@ animations. Everything idles at near-zero CPU.
 
 ¹ Lenovo Legion / LOQ laptops only (read from Lenovo's GameZone WMI interface).
 ² Needs the [helper](#the-helper-optional).
+
+## Screenshots
+
+| Left column | Right column |
+| :---: | :---: |
+| ![Calendar, AI limits and GitHub](docs/screenshots/left-column.jpg) | ![Battery, CPU, memory, GPUs, network, weather, control bar and screen time](docs/screenshots/right-column.jpg) |
+
+**Screen time breakdown**: click the screen time card for today by hour, the last 7 days and your most used apps.
+
+![Screen time detail](docs/screenshots/screen-time-detail.jpg)
+
+**Control bar**: each icon opens its options inside the same card. Here, power plans:
+
+![Control bar with power plans open](docs/screenshots/control-bar-open.jpg)
 
 ## Install
 
