@@ -19,6 +19,7 @@ animations. Everything idles at near-zero CPU.
 | **AI limits** | 2×2 | 5-hour and weekly usage per Claude account (needs [cswap](#ai-limits)) and Codex² | Hover: reset time |
 | **GitHub** | 2×2 | Last 3 months of contributions, totals, public repos, best day (public data, no token) | Double-click: your profile |
 | **Screen time** | 2×1 | Today's total, hourly bars, top apps² | Click: a full breakdown in the centre of the screen |
+| **To Do** | 2×1 | Open tasks from one Microsoft To Do list (your default *Tasks* list unless you pick another)², with due dates (red overdue, blue today) and a star for important ones | Scroll the list · click the left side to pick a list · click a task to open To Do |
 | **Control bar** | 2×½ | Power plan, Legion mode¹, temp-file cleaner, Galaxy Buds battery², Quick Share | Click an icon to open its options in place |
 | **Clock** | | macOS lock-screen style date and time | Double-click: Clock app |
 
@@ -60,6 +61,7 @@ The layout is made for **1920×1080 at 125% scaling** with the taskbar at the to
 | Location | Windows Location, every 15 min, so the weather follows you |
 | Screen time | Foreground app every ~2 s, not counting idle time. Stored only on this PC in `%LOCALAPPDATA%\Pulse\ScreenTime` |
 | Codex limits | Reads the newest `~/.codex/sessions` log |
+| To Do tasks | Reads the Microsoft To Do app's own local database (a copy, so the app is never locked). No sign-in, but it's only as fresh as the app's last sync on this PC; the card shows how old it is when it's over a day. With several accounts signed in, set `HKCU\Software\Pulse\ToDoAccount` to the account's folder name under `…\Microsoft.Todos_8wekyb3d8bbwe\LocalState\AccountsRoot`; otherwise the most recently synced account is used |
 | Card corners | Clips each card's window to its rounded shape, so the blur doesn't show past the corners |
 | Desktop icons | Moves any desktop icon that lands under a widget to the nearest free spot (skipped with auto-arrange) |
 | Edge bumps | Cursor on the left screen edge opens Widgets; the right edge opens the notification centre. Only while you're on the desktop, never over an app |
@@ -90,7 +92,7 @@ Claude rows come from `cswap list --json` (`claude-swap`, a multi-account switch
 
 ## Privacy
 
-Nothing leaves your PC except requests to Open-Meteo (your rounded coordinates, for the weather) and GitHub (the public profile you set). Screen time and everything else the helper collects stays in your user registry and `%LOCALAPPDATA%\Pulse`.
+Nothing leaves your PC except requests to Open-Meteo (your rounded coordinates, for the weather) and GitHub (the public profile you set). Screen time, your To Do tasks and everything else the helper collects stays in your user registry and `%LOCALAPPDATA%\Pulse`.
 
 ## Build
 

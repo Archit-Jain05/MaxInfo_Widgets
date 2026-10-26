@@ -10,6 +10,7 @@
 //  - Clips each Pulse card's window to its rounded card shape, so the blur behind it can't show
 //    past the border (Rainmeter drops the clip when a skin reloads, so it's re-applied every 2 s).
 //  - Moves desktop icons that end up under a widget to the nearest free grid cell, every 2 s.
+//  - ToDo/ToDoOpen/ToDoSynced: open Microsoft To Do tasks from the app's local database.
 using System;
 using System.Collections.Generic;
 using System.Device.Location;
@@ -59,6 +60,7 @@ class PulseTemps
                 try { ClipCards(); } catch { }
                 try { KeepIconsClear(); } catch { }
                 try { SampleScreenTime(key); } catch { }
+                try { WriteToDo(key); } catch { }
                 Thread.Sleep(2000);
             }
         }
@@ -537,6 +539,113 @@ class PulseTemps
             }
             return true;
         }, IntPtr.Zero);
+    }
+
+    // ---- Microsoft To Do -----------------------------------------------------------------
+    // Open tasks from the To Do app's own database for the pinned account. It's copied (with its
+    // -wal/-shm) and read from the copy, so the app is never locked; only when the app has written
+    // since. Records are separated by \x1E, fields by \x1F:
+    //   ToDo:      title, list id, due (yyyy-MM-dd or empty), important (0/1); due first, then
+    //              important, then newest (the widget filters by list)
+    //   ToDoLists: list id, name, open tasks, default (0/1); the default list first, then app order
+
+    [DllImport("winsqlite3.dll")] static extern int sqlite3_open_v2(byte[] file, out IntPtr db, int flags, IntPtr vfs);
+    [DllImport("winsqlite3.dll")] static extern int sqlite3_prepare_v2(IntPtr db, byte[] sql, int bytes, out IntPtr stmt, IntPtr tail);
+    [DllImport("winsqlite3.dll")] static extern int sqlite3_step(IntPtr stmt);
+    [DllImport("winsqlite3.dll")] static extern IntPtr sqlite3_column_text(IntPtr stmt, int col);
+    [DllImport("winsqlite3.dll")] static extern int sqlite3_finalize(IntPtr stmt);
+    [DllImport("winsqlite3.dll")] static extern int sqlite3_close(IntPtr db);
+
+    const int TODO_MAX = 500;   // tasks published (all lists); the widget shows one list
+    static DateTime todoSeen;
+
+    static void WriteToDo(RegistryKey key)
+    {
+        string root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            @"Packages\Microsoft.Todos_8wekyb3d8bbwe\LocalState\AccountsRoot");
+        if (!Directory.Exists(root)) return;
+        // the account to show: HKCU\Software\Pulse\ToDoAccount (its AccountsRoot folder name),
+        // else whichever account the app wrote to last
+        string pinned = key.GetValue("ToDoAccount") as string, src = null;
+        DateTime stamp = DateTime.MinValue;
+        foreach (string dir in Directory.GetDirectories(root))
+        {
+            if (!string.IsNullOrEmpty(pinned) && Directory.Exists(Path.Combine(root, pinned))
+                && !string.Equals(Path.GetFileName(dir), pinned, StringComparison.OrdinalIgnoreCase)) continue;
+            foreach (string f in Directory.GetFiles(dir, "todosqlite.db*"))
+            {
+                DateTime t = File.GetLastWriteTimeUtc(f);
+                if (t > stamp) { stamp = t; src = Path.Combine(dir, "todosqlite.db"); }
+            }
+        }
+        if (src == null || stamp == todoSeen) return;
+
+        string copy = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Pulse\ToDo");
+        Directory.CreateDirectory(copy);
+        foreach (string ext in new[] { "", "-wal", "-shm" })
+        {
+            string from = src + ext, to = Path.Combine(copy, "todosqlite.db" + ext);
+            if (File.Exists(from)) File.Copy(from, to, true); else if (File.Exists(to)) File.Delete(to);
+        }
+
+        string db = Path.Combine(copy, "todosqlite.db");
+        var rows = Sql(db,
+            "select t.subject, f.local_id, substr(coalesce(t.due_date, ''), 1, 10), case when t.importance > 0 then 1 else 0 end " +
+            "from tasks t join task_folders f on f.local_id = t.task_folder_local_id " +
+            "where t.deleted = 0 and f.deleted = 0 and t.status <> 'Completed' " +
+            "order by coalesce(t.due_date, '') = '', t.due_date, t.importance desc, t.created_datetime desc", 4);
+        var lists = Sql(db,
+            "select f.local_id, f.name, count(t._id), f.is_default from task_folders f " +
+            "left join tasks t on t.task_folder_local_id = f.local_id and t.deleted = 0 and t.status <> 'Completed' " +
+            "where f.deleted = 0 group by f.local_id order by f.is_default desc, f.position", 4);
+        if (rows.Count > TODO_MAX) rows.RemoveRange(TODO_MAX, rows.Count - TODO_MAX);
+        key.SetValue("ToDo", Records(rows));
+        key.SetValue("ToDoLists", Records(lists));
+        key.SetValue("ToDoOpen", rows.Count, RegistryValueKind.DWord);
+        key.SetValue("ToDoSynced", ((long)(stamp - new DateTime(1970, 1, 1)).TotalSeconds).ToString());
+        todoSeen = stamp;
+    }
+
+    static string Records(List<string[]> rows)
+    {
+        var sb = new StringBuilder();
+        for (int i = 0; i < rows.Count; i++)
+        {
+            if (i > 0) sb.Append('\x1E');
+            sb.Append(string.Join("\x1F", Array.ConvertAll(rows[i], v => (v ?? "").Replace('\x1E', ' ').Replace('\x1F', ' '))));
+        }
+        return sb.ToString();
+    }
+
+    // Read-only query returning every row's first `cols` columns as text.
+    static List<string[]> Sql(string file, string query, int cols)
+    {
+        var rows = new List<string[]>();
+        IntPtr db, stmt;
+        if (sqlite3_open_v2(Encoding.UTF8.GetBytes(file + "\0"), out db, 1, IntPtr.Zero) != 0) { sqlite3_close(db); return rows; }   // SQLITE_OPEN_READONLY
+        try
+        {
+            if (sqlite3_prepare_v2(db, Encoding.UTF8.GetBytes(query + "\0"), -1, out stmt, IntPtr.Zero) != 0) return rows;
+            while (sqlite3_step(stmt) == 100)   // SQLITE_ROW
+            {
+                var r = new string[cols];
+                for (int c = 0; c < cols; c++) r[c] = Utf8(sqlite3_column_text(stmt, c));
+                rows.Add(r);
+            }
+            sqlite3_finalize(stmt);
+        }
+        finally { sqlite3_close(db); }
+        return rows;
+    }
+
+    static string Utf8(IntPtr p)
+    {
+        if (p == IntPtr.Zero) return null;
+        int n = 0;
+        while (Marshal.ReadByte(p, n) != 0) n++;
+        var b = new byte[n];
+        Marshal.Copy(p, b, 0, n);
+        return Encoding.UTF8.GetString(b);
     }
 
     // ---- Desktop icons -------------------------------------------------------------------
